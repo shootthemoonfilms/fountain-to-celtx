@@ -39,57 +39,69 @@ var tokens = fountain.tokenize(inputData.toString());
 
 console.log(tokens.length + " tokens processed");
 
-// FIXME
-var title = 'TITLE';
-var author = 'AUTHOR';
-var contactBlock = 'CONTACT BLOCK';
-
 var err;
 
 console.log("Generating script HTML ... ");
-var script = createScriptHtml (tokens, title, author, contactBlock);
+var script = createScriptHtml (tokens,
+	       	extractFirstToken(tokens, 'title'), 
+		extractFirstToken(tokens, 'author'), 
+		extractFirstToken(tokens, 'notes'), 
+		extractFirstToken(tokens, 'copyright'), 
+		extractFirstToken(tokens, 'credit')
+		);
 err = fs.writeFileSync("script.html", script);
 if (err) {
 	console.log(err);
+	return;
 }
 
 // Support functions
 
-function createScriptHtml (tokens, title, author, contactBlock) {
+function extractFirstToken (tokens, tokenName) {
+	for (var k in tokens.reverse()) {
+		if (tokens[k].type == tokenName) {
+			return tokens[k].text;
+		}
+	}
+	return '';
+} // end extractFirsttoken
+
+function createScriptHtml (tokens, title, author, contactBlock, copyright, byline) {
 	var buf = '';
 
 	// Create stock header
 	buf += '<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">\n' +
-'<html>\n' +
-'<head>\n' +
-'  <title>' + title + '</title>\n' +
-'  <link rel="stylesheet" type="text/css" href="chrome://celtx/content/editor.css">\n' +
-'  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">\n' +
-'  <style id="leftheading" type="text/css">p.sceneheading:before { display: none !important; } </style>\n' +
-'  <style id="rightheading" type="text/css">p.sceneheading:after { display: none !important; } </style>\n' +
-'  <meta content="left" name="CX.sceneNumbering">\n' +
-'  <meta content="false" name="CX.showPageNumbers">\n' +
-'  <meta content="false" name="CX.showFirstPageNumber">\n' +
-'  <meta content="false" name="CX.showCharNumbers">\n' +
-'  <meta content="false" name="CX.dialogNumbering">\n' +
-'  <style id="pagenumbers" type="text/css">.softbreak { display: none !important; } </style>\n' +
-'  <style id="charnumbers" type="text/css">\n' +
-'.character:before, .sound:before, .music:before, .voice:before { display: none !important; }\n' +
-'\n' +
-'  </style>\n' +
-'  <link href="chrome://celtx/content/style/film/USLetter/Normal.css" type="text/css" rel="stylesheet">\n' +
-'  <meta content="' + author + '" name="Author">\n' +
-'  <meta content="" name="DC.source">\n' +
-'  <meta content="" name="DC.rights">\n' +
-'  <meta content="' + contactBlock + '" name="CX.contact">\n' +
-'  <meta content="By" name="CX.byline">' +
-'</head>\n' +
-'<body>\n';
+		'<html>\n' +
+		'<head>\n' +
+		'  <title>' + title + '</title>\n' +
+		'  <link rel="stylesheet" type="text/css" href="chrome://celtx/content/editor.css">\n' +
+		'  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">\n' +
+		'  <style id="leftheading" type="text/css">p.sceneheading:before { display: none !important; } </style>\n' +
+		'  <style id="rightheading" type="text/css">p.sceneheading:after { display: none !important; } </style>\n' +
+		'  <meta content="left" name="CX.sceneNumbering">\n' +
+		'  <meta content="false" name="CX.showPageNumbers">\n' +
+		'  <meta content="false" name="CX.showFirstPageNumber">\n' +
+		'  <meta content="false" name="CX.showCharNumbers">\n' +
+		'  <meta content="false" name="CX.dialogNumbering">\n' +
+		'  <style id="pagenumbers" type="text/css">.softbreak { display: none !important; } </style>\n' +
+		'  <style id="charnumbers" type="text/css">\n' +
+		'.character:before, .sound:before, .music:before, .voice:before { display: none !important; }\n' +
+		'\n' +
+		'  </style>\n' +
+		'  <link href="chrome://celtx/content/style/film/USLetter/Normal.css" type="text/css" rel="stylesheet">\n' +
+		'  <meta content="' + author + '" name="Author">\n' +
+		'  <meta content="" name="DC.source">\n' +
+		'  <meta content="' + copyright + '" name="DC.rights">\n' +
+		'  <meta content="' + contactBlock + '" name="CX.contact">\n' +
+		'  <meta content="' + byline + '" name="CX.byline">\n' +
+		'</head>\n' +
+		'<body>\n';
 
 	var scenecount = 0;
 
 	// Loop and create by tokens
 	for (var k in tokens.reverse()) {
+		// DEBUG : console.log(tokens[k]);
 		switch (tokens[k].type) {
 			case 'action':
 			case 'character':
@@ -108,7 +120,8 @@ function createScriptHtml (tokens, title, author, contactBlock) {
 	}
 
 	// Create stock footer
-	buf += '</body></html>\n';
+	buf += '</body>\n</html>\n';
 
 	return buf;
-}
+} // end createScriptHtml
+
