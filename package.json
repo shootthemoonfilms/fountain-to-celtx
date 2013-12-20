@@ -1,6 +1,7 @@
 {
 	"dependencies": {
 		"ansi"          : ">= 0.2.1",
+		"generate-key"  : ">= 0.0.6",
 		"html-entities" : ">= 1.0.10",
 		"node-zip"      : ">= 1.0.1",
 		"optimist"      : ">= 0.6.0"

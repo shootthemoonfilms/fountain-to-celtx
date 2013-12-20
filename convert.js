@@ -15,7 +15,8 @@ var ansi = require("ansi"),
     fountain = require('./fountain'),
     fs = require('fs'),
     htmlentities = require('html-entities').Html4Entities,
-    zip = require('node-zip');
+    rand = require("generate-key"),
+    zip = require('node-zip')();
 
 var entities = new htmlentities();
 
@@ -41,6 +42,20 @@ console.log(tokens.length + " tokens processed");
 
 var err;
 
+console.log("Generating id tokens ... ");
+var keys = {
+	installId: rand.generateKey(5),
+	projectId: rand.generateKey(10),
+	scriptId:  rand.generateKey(10),
+	about: [
+		rand.generateKey(5),
+		rand.generateKey(5),
+		rand.generateKey(5)	
+	],
+	tagnames: rand.generateKey(5),
+	characters: {}
+};
+
 console.log("Generating script HTML ... ");
 var script = createScriptHtml (tokens,
 	       	extractFirstToken(tokens, 'title'), 
@@ -55,7 +70,45 @@ if (err) {
 	return;
 }
 
+console.log("Extracting characters ... ");
+var characters = extractCharacters(tokens);
+console.log("Generating ids ... ");
+for (var c in characters) {
+	keys.characters[characters[c]] = rand.generateKey(10);
+}
+
+console.log("Generating local.rdf... ");
+var localRdf = createLocalRdf(tokens);
+
+console.log("Generating project.rdf... ");
+var projectRdf = createProjectRdf(tokens);
+
+
+// Write all resulting files to archive
+zip.file('local.rdf', localRdf);
+zip.file('project.rdf', projectRdf);
+zip.file('script.html', script);
+var zipdata = zip.generate({base64:false,compression:'DEFLATE'});
+fs.writeFileSync(argv.o, zipdata, 'binary');
+console.log("Wrote output CeltX file '" + argv.o + "'");
+
 // Support functions
+
+function extractCharacters (tokens) {
+	var ch = {};
+	for (var k in tokens.reverse()) {
+		if (tokens[k].type == 'character') {
+			var thisch;
+			if (tokens[k].text.match(/\(/)) {
+				thisch = tokens[k].text.split('(')[0].trim();
+			} else {
+				thisch = tokens[k].text.trim();
+			}
+			ch[thisch] = thisch;
+		}
+	}
+	return Object.keys(ch);
+} // end extractCharacters
 
 function extractFirstToken (tokens, tokenName) {
 	for (var k in tokens.reverse()) {
@@ -65,6 +118,69 @@ function extractFirstToken (tokens, tokenName) {
 	}
 	return '';
 } // end extractFirsttoken
+
+function extractScenes (tokens) {
+	var s = [];
+	for (var k in tokens.reverse()) {
+		if (tokens[k].type == 'scene_heading') {
+			s.push(tokens[k].text.trim());
+		}
+	}
+	return s;
+} // end extractScenes
+
+function createLocalRdf (tokens) {
+	var buf = '<?xml version="1.0"?>\n' +
+		'<RDF:RDF xmlns:dc="http://purl.org/dc/elements/1.1/"\n' +
+		'  xmlns:cx="http://celtx.com/NS/v1/"\n' +
+		'  xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"\n' +
+		'  xmlns:NC="http://home.netscape.com/NC-rdf#"\n' +
+		'  xmlns:RDF="http://www.w3.org/1999/02/22-rdf-syntax-ns#">\n' +
+		'<RDF:Description RDF:about="http://celtx.com/project/' + keys.projectId + '">\n' +
+		'<cx:opentabs RDF:resource="rdf:#' + keys.installId + '"/>\n' +
+		'</RDF:Description>\n' +
+		'<RDF:Seq RDF:about="rdf:#' + keys.installId + '">\n' +
+		'<RDF:li RDF:resource="http://celtx.com/res/' + keys.scriptId + '"/>\n' +
+		'</RDF:Seq>\n' +
+		'</RDF:RDF>\n';
+	return buf;
+} // end createLocalRdf
+
+function createProjectRdf (tokens) {
+	var buf = '';
+	buf += '<?xml version="1.0"?>\n'
+		'<RDF:RDF xmlns:dc="http://purl.org/dc/elements/1.1/"\n' +
+		'  xmlns:cx="http://celtx.com/NS/v1/"\n' +
+		'  xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"\n' +
+		'  xmlns:NC="http://home.netscape.com/NC-rdf#"\n' +
+		'  xmlns:RDF="http://www.w3.org/1999/02/22-rdf-syntax-ns#">\n' +
+		'<RDF:Seq RDF:about="rdf:#' + keys.about[0] + '">\n' +
+		'<RDF:li RDF:resource="rdf:#' + keys.about[0] + '"/>\n' +
+		'</RDF:Seq>\n' +
+		'<RDF:Seq RDF:about="rdf:#' + keys.about[0] + '">\n';
+
+	// Loop through characters
+	for (var k in characters) {
+		buf += '<RDF:li RDF:resource="http://celtx.com/res/' + keys.characters[characters[k]] + '"/>\n';
+	}
+
+	buf += '</RDF:Seq>\n' +
+		'<cx:DepartmentList RDF:about="rdf:#' + keys.about[0] + '"\n' +
+		'  cx:size="3">\n' +
+		'  <cx:department RDF:resource="http://celtx.com/NS/v1/Cast"/>\n' +
+		'</cx:DepartmentList>\n' +
+		'<RDF:Seq RDF:about="rdf:#' + keys.tagnames + '">\n' +
+		'  <RDF:li>Plot A</RDF:li>\n' +
+		'  <RDF:li>Plot B</RDF:li>\n' +
+		'  <RDF:li>Plot C</RDF:li>\n' +
+		'  <RDF:li>Plot D</RDF:li>\n' +
+		'  <RDF:li>Plot E</RDF:li>\n' +
+		'  <RDF:li>Plot F</RDF:li>\n' +
+		'  <RDF:li>Plot G</RDF:li>\n' +
+		'</RDF:Seq>\n';
+
+	return buf;
+} // end createProjectRdf
 
 function createScriptHtml (tokens, title, author, contactBlock, copyright, byline) {
 	var buf = '';
