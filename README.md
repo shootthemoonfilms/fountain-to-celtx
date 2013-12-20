@@ -11,4 +11,7 @@ npm install
 
 ## Running
 
+```
+./convert.js -i test.fountain -o test.celtx
+```
 

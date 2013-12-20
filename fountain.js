@@ -1,6 +1,7 @@
 // fountain-js 0.1.10
 // http://www.opensource.org/licenses/mit-license.php
 // Copyright (c) 2012 Matt Daly
+// Modified to expose tokenization routines by @jbuchbinder
 
 ;(function() {
   'use strict';
